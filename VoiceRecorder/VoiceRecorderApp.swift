@@ -12,7 +12,7 @@ import SwiftData
 struct VoiceRecorderApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            AudioNote.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -25,7 +25,8 @@ struct VoiceRecorderApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+//            ContentView()
+            AudioNotesView()
         }
         .modelContainer(sharedModelContainer)
     }
