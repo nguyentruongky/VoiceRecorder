@@ -3,7 +3,7 @@ import SwiftData
 
 struct AudioNotesView: View {
     @Query private var audioNotes: [AudioNote]
-        @Environment(\.modelContext) private var modelContext
+    @Environment(\.modelContext) private var modelContext
     @State private var showingRecordingSheet = false
 
     var body: some View {

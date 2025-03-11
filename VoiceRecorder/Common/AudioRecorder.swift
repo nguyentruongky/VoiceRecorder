@@ -6,14 +6,20 @@ enum AudioManagerError: Error {
     case audioSessionSetupFailed(Error)
     case recordingStartFailed(Error)
     case noActiveRecording
+    case recordingFailed
 }
 
-class AudioManager: NSObject, ObservableObject {
+class AudioRecorder: NSObject, ObservableObject {
     @Published var isRecording = false
-    @Published var playingNote: AudioNote?
+    @Published var currentTime: TimeInterval = 0
+
     private var audioRecorder: AVAudioRecorder?
     private var timer: Timer?
-    @Published var currentTime: TimeInterval = 0
+    private var audioSession: AVAudioSession { AVAudioSession.sharedInstance() }
+
+    deinit {
+        cleanUp()
+    }
 
     private func requestMicrophonePermission() async throws {
         return try await withCheckedThrowingContinuation { continuation in
@@ -34,9 +40,8 @@ class AudioManager: NSObject, ObservableObject {
 
     private func record() throws {
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .default, options: .defaultToSpeaker)
-            try session.setActive(true)
+            try audioSession.setCategory(.playAndRecord, mode: .default, options: .defaultToSpeaker)
+            try audioSession.setActive(true)
         } catch {
             throw AudioManagerError.audioSessionSetupFailed(error)
         }
@@ -44,21 +49,26 @@ class AudioManager: NSObject, ObservableObject {
         let audioFilename = FileManager.default.documentsDirectory.appendingPathComponent("\(UUID().uuidString).m4a")
         let settings: [String: Any] = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 12000,
+            AVSampleRateKey: 44100,
             AVNumberOfChannelsKey: 1,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
+            AVEncoderBitRateKey: 128000
         ]
 
         do {
             audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
             audioRecorder?.delegate = self
-            audioRecorder?.record()
+
+            if audioRecorder?.record() == false {
+                throw AudioManagerError.recordingFailed
+            }
 
             DispatchQueue.main.async { [weak self] in
                 self?.isRecording = true
                 self?.startTimer()
             }
         } catch {
+            try? audioSession.setActive(false)
             throw AudioManagerError.recordingStartFailed(error)
         }
     }
@@ -68,6 +78,7 @@ class AudioManager: NSObject, ObservableObject {
             throw AudioManagerError.noActiveRecording
         }
 
+        let url = recorder.url
         recorder.stop()
 
         DispatchQueue.main.async { [weak self] in
@@ -75,17 +86,21 @@ class AudioManager: NSObject, ObservableObject {
             self?.stopTimer()
         }
 
-        return recorder.url.lastPathComponent
+        try? audioSession.setActive(false)
+
+        return url.lastPathComponent
     }
 
     private func startTimer() {
         stopTimer()
 
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self = self, let recorder = self.audioRecorder else { return }
+            guard let self = self, let recorder = self.audioRecorder, recorder.isRecording else { return }
+
             self.currentTime = recorder.currentTime
         }
 
+        RunLoop.current.add(timer!, forMode: .common)
     }
 
     private func stopTimer() {
@@ -93,10 +108,33 @@ class AudioManager: NSObject, ObservableObject {
         timer = nil
         currentTime = 0
     }
+
+    func cleanUp() {
+        if isRecording {
+            audioRecorder?.stop()
+        }
+
+        stopTimer()
+        audioRecorder = nil
+
+        try? audioSession.setActive(false)
+    }
+
+    var currentRecordingURL: URL? {
+        return audioRecorder?.url
+    }
 }
 
-extension AudioManager: AVAudioRecorderDelegate, AVAudioPlayerDelegate {
+extension AudioRecorder: AVAudioRecorderDelegate, AVAudioPlayerDelegate {
     func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
-        isRecording = false
+        DispatchQueue.main.async { [weak self] in
+            self?.cleanUp()
+        }
+    }
+
+    func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {
+        DispatchQueue.main.async { [weak self] in
+            self?.cleanUp()
+        }
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RecordingView: View {
-    @StateObject private var audioManager = AudioManager()
+    @StateObject private var recorder = AudioRecorder()
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @State private var showAlert = false
@@ -20,7 +20,7 @@ struct RecordingView: View {
                             .frame(width: 280, height: 280)
 
                         Circle()
-                            .strokeBorder(audioManager.isRecording ? Color.red : Color.blue, lineWidth: 4)
+                            .strokeBorder(recorder.isRecording ? Color.red : Color.blue, lineWidth: 4)
                             .frame(width: 240, height: 240)
 
                         VStack(spacing: 8) {
@@ -28,9 +28,9 @@ struct RecordingView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
 
-                            Text(formatTime(audioManager.currentTime))
+                            Text(formatTime(recorder.currentTime))
                                 .font(.system(size: 32, weight: .bold, design: .monospaced))
-                                .foregroundColor(audioManager.isRecording ? .red : .primary)
+                                .foregroundColor(recorder.isRecording ? .red : .primary)
                         }
                     }
                     .padding(.top, 40)
@@ -39,7 +39,7 @@ struct RecordingView: View {
 
                     VStack(spacing: 24) {
                         Button(action: {
-                            if audioManager.isRecording {
+                            if recorder.isRecording {
                                 stopRecording()
                             } else {
                                 startRecording()
@@ -47,17 +47,17 @@ struct RecordingView: View {
                         }) {
                             ZStack {
                                 Circle()
-                                    .fill(audioManager.isRecording ? Color.red : Color.blue)
+                                    .fill(recorder.isRecording ? Color.red : Color.blue)
                                     .frame(width: 80, height: 80)
                                     .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
 
-                                Image(systemName: audioManager.isRecording ? "stop.fill" : "mic.fill")
+                                Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
                                     .font(.system(size: 36))
                                     .foregroundColor(.white)
                             }
                         }
 
-                        Text(audioManager.isRecording ? "Tap to stop recording" : "Tap to start recording")
+                        Text(recorder.isRecording ? "Tap to stop recording" : "Tap to start recording")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -70,9 +70,9 @@ struct RecordingView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        if audioManager.isRecording {
+                        if recorder.isRecording {
                             do {
-                                _ = try audioManager.stopRecording()
+                                _ = try recorder.stopRecording()
                             } catch {
                                 print("Error stopping recording during cancel: \(error)")
                             }
@@ -90,7 +90,7 @@ struct RecordingView: View {
     private func startRecording() {
         Task {
             do {
-                try await audioManager.prepareToRecord()
+                try await recorder.prepareToRecord()
             } catch AudioManagerError.microphonePermissionDenied {
                 showErrorAlert("Microphone access is required for recording. Please enable it in Settings.")
             } catch AudioManagerError.audioSessionSetupFailed(let error) {
@@ -105,10 +105,10 @@ struct RecordingView: View {
 
     private func stopRecording() {
         do {
-            let fileName = try audioManager.stopRecording()
+            let fileName = try recorder.stopRecording()
             let note = AudioNote(
                 title: fileName,
-                duration: audioManager.currentTime
+                duration: recorder.currentTime
             )
             modelContext.insert(note)
             try? modelContext.save()

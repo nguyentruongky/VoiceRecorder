@@ -17,7 +17,7 @@ struct AudioNoteRow: View {
 
                 Image(systemName: "waveform")
                     .font(.system(size: 20))
-                    .foregroundColor(viewModel.isPlaying ? .blue : .gray)
+                    .foregroundColor(viewModel.isPlaying ? .red : .gray)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -42,16 +42,14 @@ struct AudioNoteRow: View {
                     Text(viewModel.note.createdAt.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
                         .foregroundColor(.gray)
+                }
 
-                    Text("•")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-
+                HStack(spacing: 6) {
                     Image(systemName: "clock")
                         .font(.system(size: 10))
                         .foregroundColor(.gray)
 
-                    Text(viewModel.duration)
+                    Text(viewModel.currentTime)
                         .font(.caption)
                         .foregroundColor(.gray)
                 }
