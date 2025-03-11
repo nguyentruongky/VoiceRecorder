@@ -4,9 +4,8 @@ import SwiftData
 struct AudioNotesView: View {
     @Query private var audioNotes: [AudioNote]
         @Environment(\.modelContext) private var modelContext
-    @StateObject private var audioManager = AudioManager()
     @State private var showingRecordingSheet = false
-    
+
     var body: some View {
         NavigationView {
             List(audioNotes) { note in
@@ -20,7 +19,7 @@ struct AudioNotesView: View {
                 }
             }
             .sheet(isPresented: $showingRecordingSheet) {
-                RecordingView(audioManager: audioManager)
+                RecordingView()
             }
         }
     }
@@ -28,23 +27,33 @@ struct AudioNotesView: View {
 
 struct AudioNoteRow: View {
     @StateObject private var viewModel: AudioNoteViewModel
-    
+
     init(note: AudioNote) {
         _viewModel = StateObject(wrappedValue: AudioNoteViewModel(note: note))
     }
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
                 Text(viewModel.note.title)
                     .font(.headline)
-                Text(viewModel.note.createdAt.formatted())
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                HStack {
+                    Text(viewModel.note.createdAt.formatted())
+                        .font(.caption)
+                        .foregroundColor(.gray)
+
+                    Text("•")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+
+                    Text(formatDuration(viewModel.note.duration))
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
             }
-            
+
             Spacer()
-            
+
             Button(action: {
                 viewModel.togglePlayback()
             }) {
@@ -53,5 +62,20 @@ struct AudioNoteRow: View {
             }
         }
         .padding(.vertical, 8)
+        .alert(viewModel.alertMessage, isPresented: $viewModel.showAlert) {
+            Button("OK", role: .cancel) { }
+        }
+    }
+
+    // Helper function to format duration
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+
+        if minutes > 0 {
+            return String(format: "%d:%02d", minutes, seconds)
+        } else {
+            return String(format: "0:%02d", seconds)
+        }
     }
 }

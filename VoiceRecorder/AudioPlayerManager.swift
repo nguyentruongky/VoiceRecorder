@@ -1,28 +1,35 @@
 import AVFoundation
 import Foundation
+import SwiftUI
+
+enum AudioPlayerError: Error {
+    case invalidURL
+    case playbackError(Error)
+}
 
 class AudioPlayerManager: NSObject {
     static let shared = AudioPlayerManager()
     private var audioPlayer: AVAudioPlayer?
     private var currentViewModel: AudioNoteViewModel?
-    
+
     private override init() {
         super.init()
     }
-    
-    func play(viewModel: AudioNoteViewModel) {
-        // Stop current playback if different from requested viewModel
+
+    func play(viewModel: AudioNoteViewModel) throws {
         if let currentVM = currentViewModel, currentVM !== viewModel {
             currentVM.stopPlayback()
         }
-        
-        guard let url = viewModel.url else { return }
-        
+
+        guard let url = viewModel.url else {
+            throw AudioPlayerError.invalidURL
+        }
+
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .default) // Adjust based on your use case
             try session.setActive(true)
-            
+
             audioPlayer = try AVAudioPlayer(contentsOf: url)
             audioPlayer?.delegate = self
             audioPlayer?.play()
@@ -30,9 +37,10 @@ class AudioPlayerManager: NSObject {
             viewModel.setPlaying(true)
         } catch {
             print("Could not start playing: \(error)")
+            throw AudioPlayerError.playbackError(error)
         }
     }
-    
+
     func stop() {
         audioPlayer?.stop()
         audioPlayer = nil
