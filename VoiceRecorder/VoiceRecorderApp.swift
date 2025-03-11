@@ -25,7 +25,6 @@ struct VoiceRecorderApp: App {
 
     var body: some Scene {
         WindowGroup {
-//            ContentView()
             AudioNotesView()
         }
         .modelContainer(sharedModelContainer)

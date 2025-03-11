@@ -43,10 +43,10 @@ class AudioManager: NSObject, ObservableObject {
 
         let audioFilename = FileManager.default.documentsDirectory.appendingPathComponent("\(UUID().uuidString).m4a")
         let settings: [String: Any] = [
-            AVFormatIDKey: Int(kAudioFormatMPEG4AAC), // AAC format
-            AVSampleRateKey: 12000,                   // 12 kHz sample rate (adjust if needed)
-            AVNumberOfChannelsKey: 1,                 // Mono channel
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue // High quality
+            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+            AVSampleRateKey: 12000,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ]
 
         do {
@@ -79,36 +79,16 @@ class AudioManager: NSObject, ObservableObject {
     }
 
     private func startTimer() {
-        // Make sure we're on the main thread
-        if !Thread.isMainThread {
-            DispatchQueue.main.async { [weak self] in
-                self?.startTimer()
-            }
-            return
-        }
-
-        // Stop any existing timer first
         stopTimer()
 
-        // Create a new timer on the main run loop
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self = self, let recorder = self.audioRecorder else { return }
             self.currentTime = recorder.currentTime
         }
 
-        // Make sure the timer is added to the current run loop
-        RunLoop.current.add(timer!, forMode: .common)
     }
 
     private func stopTimer() {
-        // Make sure we're on the main thread
-        if !Thread.isMainThread {
-            DispatchQueue.main.async { [weak self] in
-                self?.stopTimer()
-            }
-            return
-        }
-
         timer?.invalidate()
         timer = nil
         currentTime = 0
@@ -118,8 +98,5 @@ class AudioManager: NSObject, ObservableObject {
 extension AudioManager: AVAudioRecorderDelegate, AVAudioPlayerDelegate {
     func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
         isRecording = false
-    }
-
-    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
     }
 }

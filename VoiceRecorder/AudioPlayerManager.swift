@@ -27,7 +27,7 @@ class AudioPlayerManager: NSObject {
 
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default) // Adjust based on your use case
+            try session.setCategory(.playback, mode: .default)
             try session.setActive(true)
 
             audioPlayer = try AVAudioPlayer(contentsOf: url)
